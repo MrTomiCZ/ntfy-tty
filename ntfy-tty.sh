@@ -5,6 +5,33 @@
 # > License: GNU AGPLv3
 # > Copyright 2026 Jakub Petrovič
 
+# Dependency checks
+NTFY_DEPS=('curl' 'date' 'mkdir' 'echo' 'trap' 'bash')
+
+toolErr() {
+    echo "$1 doesn't exist" >&2
+    echo "please install or edit source" >&2
+    echo "to use a tool of your choice" >&2
+    exit 1
+}
+
+# Check for bash version
+if (( BASH_VERSINFO[0] >= 4 )); then
+    :
+else
+    echo "bash 4.0 or higher is required to run this script" >&2
+    exit 1
+fi
+
+# Check for dependencies
+for item in "${NTFY_DEPS[@]}"; do
+    if command -v "$item" >/dev/null 2>&1; then
+        :
+    else
+        toolErr "$item"
+    fi
+done
+
 set -T
 # Global variables
 CONFIG_LOCATION=$HOME/.ntfy-tty/config.conf
