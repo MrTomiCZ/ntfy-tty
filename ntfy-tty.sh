@@ -5,12 +5,40 @@
 # > License: GNU AGPLv3
 # > Copyright 2026 Jakub Petrovič
 
+# Dependency checks
+NTFY_DEPS=('curl' 'date' 'mkdir' 'readlink' 'cmp' 'diff' 'less' 'cp' 'chmod' 'mv' 'rm' 'tr')
+
+toolErr() {
+    echo "$1 doesn't exist" >&2
+    echo "please install or edit source" >&2
+    echo "to use a tool of your choice" >&2
+    exit 1
+}
+
+# Check for bash version
+if (( BASH_VERSINFO[0] >= 4 )); then
+    :
+else
+    echo "bash 4.0 or higher is required to run this script" >&2
+    exit 1
+fi
+
+# Check for dependencies
+for item in "${NTFY_DEPS[@]}"; do
+    if command -v "$item" >/dev/null 2>&1; then
+        :
+    else
+        toolErr "$item"
+    fi
+done
+
 set -T
 # Global variables
 CONFIG_LOCATION=$HOME/.ntfy-tty/config.conf
 LOG_DIR_LOCATION=$HOME/.ntfy-tty/logs/
 LOG_FILE_NAME="ntfy-tty_$(date +'%Y-%m-%d_%H-%M-%S').log"
 FULL_LOG_PATH="$LOG_DIR_LOCATION/$LOG_FILE_NAME"
+NTFY_SOURCE="https://github.com/jakub-petrovic/ntfy-tty/raw/refs/heads/main/ntfy-tty.sh"
 
 MESSAGE=""
 NTFY_TOKEN=""
@@ -19,6 +47,7 @@ NTFY_PASSWORD=""
 NTFY_TOPIC=""
 NTFY_SERVER="https://ntfy.sh/"
 
+# Functions
 log() {
     mkdir -p "$(dirname $FULL_LOG_PATH)"
     echo "$1" >> "$FULL_LOG_PATH"
@@ -43,17 +72,63 @@ load_config() {
 
 send_ntfy() {
     # echo "$NTFY_TOKEN $NTFY_SERVER $NTFY_TOPIC $NTFY_USERNAME $NTFY_PASSWORD $MESSAGE"
+    # Auth methods
     if [[ -n "$NTFY_TOKEN" ]]; then
+        # Token
         curl -H "Authorization: Bearer $NTFY_TOKEN" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
     elif [[ -n "$NTFY_USERNAME" && -n "$NTFY_PASSWORD" ]]; then
+        # User & pass
         curl -u "$NTFY_USERNAME:$NTFY_PASSWORD" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
     else
+        # No auth
         curl -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
     fi
 }
 
+updater() {
+    # Updater
+    TEMPFILE="${TMPDIR:-/tmp}/spymypc.sh"
+    CURRFILE="$(readlink -f "$0")"
+    curl -fsSL "$NTFY_SOURCE" -o "$TEMPFILE"
+    if [[ ! -s "$TEMPFILE" ]]; then
+        echo "Failed to download update"
+    fi
+    if cmp -s "$TEMPFILE" "$CURRFILE"; then
+        echo "Up to date"
+        rm "$TEMPFILE"
+    else
+        diff --color=always "$TEMPFILE" "$CURRFILE" | less -R
+
+        while true; do
+            read -p "Update? [Yn] " answer
+
+            case "$answer" in
+                ""[Yy])
+                    echo "Updating"
+                    cp "$TEMPFILE" "$CURRFILE.tmp" &&
+                    chmod +x "$CURRFILE.tmp" &&
+                    mv "$CURRFILE.tmp" "$CURRFILE" &&
+                    rm "$TEMPFILE" &&
+                    exec "$CURRFILE" $*
+                    break
+                    ;;
+                [Nn])
+                    echo "alr not updating"
+                    rm "$TEMPFILE"
+                    break
+                    ;;
+                *)
+                    echo "invalid"
+                    ;;
+            esac
+        done
+    fi
+}
+
+# Load the config
 load_config
 
+# Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -m|--message) 
@@ -102,7 +177,9 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
+# Debugging
 trap 'log "RUNNING: $BASH_COMMAND"' DEBUG
 trap 'log "ERROR: Command failed on line $LINENO with exit code $?"' ERR
 
+# Main
 send_ntfy
