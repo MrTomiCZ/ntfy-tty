@@ -85,43 +85,45 @@ send_ntfy() {
     fi
 }
 
-# Updater
-TEMPFILE="${TMPDIR:-/tmp}/spymypc.sh"
-CURRFILE="$(readlink -f "$0")"
-curl -fsSL "$NTFY_SOURCE" -o "$TEMPFILE"
-if [[ ! -s "$TEMPFILE" ]]; then
-    echo "Failed to download update"
-fi
-if cmp -s "$TEMPFILE" "$CURRFILE"; then
-    echo "Up to date"
-    rm "$TEMPFILE"
-else
-    diff --color=always "$TEMPFILE" "$CURRFILE" | less -R
+updater() {
+    # Updater
+    TEMPFILE="${TMPDIR:-/tmp}/spymypc.sh"
+    CURRFILE="$(readlink -f "$0")"
+    curl -fsSL "$NTFY_SOURCE" -o "$TEMPFILE"
+    if [[ ! -s "$TEMPFILE" ]]; then
+        echo "Failed to download update"
+    fi
+    if cmp -s "$TEMPFILE" "$CURRFILE"; then
+        echo "Up to date"
+        rm "$TEMPFILE"
+    else
+        diff --color=always "$TEMPFILE" "$CURRFILE" | less -R
 
-    while true; do
-        read -p "Update? [Yn] " answer
+        while true; do
+            read -p "Update? [Yn] " answer
 
-        case "$answer" in
-            ""[Yy])
-                echo "Updating"
-                cp "$TEMPFILE" "$CURRFILE.tmp" &&
-                chmod +x "$CURRFILE.tmp" &&
-                mv "$CURRFILE.tmp" "$CURRFILE" &&
-                rm "$TEMPFILE" &&
-                exec "$CURRFILE" $*
-                break
-                ;;
-            [Nn])
-                echo "alr not updating"
-                rm "$TEMPFILE"
-                break
-                ;;
-            *)
-                echo "invalid"
-                ;;
-        esac
-    done
-fi
+            case "$answer" in
+                ""[Yy])
+                    echo "Updating"
+                    cp "$TEMPFILE" "$CURRFILE.tmp" &&
+                    chmod +x "$CURRFILE.tmp" &&
+                    mv "$CURRFILE.tmp" "$CURRFILE" &&
+                    rm "$TEMPFILE" &&
+                    exec "$CURRFILE" $*
+                    break
+                    ;;
+                [Nn])
+                    echo "alr not updating"
+                    rm "$TEMPFILE"
+                    break
+                    ;;
+                *)
+                    echo "invalid"
+                    ;;
+            esac
+        done
+    fi
+}
 
 # Load the config
 load_config
