@@ -19,6 +19,7 @@ NTFY_PASSWORD=""
 NTFY_TOPIC=""
 NTFY_SERVER="https://ntfy.sh/"
 
+# Functions
 log() {
     mkdir -p "$(dirname $FULL_LOG_PATH)"
     echo "$1" >> "$FULL_LOG_PATH"
@@ -43,17 +44,25 @@ load_config() {
 
 send_ntfy() {
     # echo "$NTFY_TOKEN $NTFY_SERVER $NTFY_TOPIC $NTFY_USERNAME $NTFY_PASSWORD $MESSAGE"
+    # Auth methods
     if [[ -n "$NTFY_TOKEN" ]]; then
+        # Token
         curl -H "Authorization: Bearer $NTFY_TOKEN" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
     elif [[ -n "$NTFY_USERNAME" && -n "$NTFY_PASSWORD" ]]; then
+        # User & pass
         curl -u "$NTFY_USERNAME:$NTFY_PASSWORD" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
     else
+        # No auth
         curl -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
     fi
 }
 
+# 
+
+# Load the config
 load_config
 
+# Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -m|--message) 
@@ -102,7 +111,9 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
+# Debugging
 trap 'log "RUNNING: $BASH_COMMAND"' DEBUG
 trap 'log "ERROR: Command failed on line $LINENO with exit code $?"' ERR
 
+# Main
 send_ntfy
