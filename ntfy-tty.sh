@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# > Author: JPman
+# > Email: admin@jpman.eu
+# > Github: https://github.com/jakub-petrovic/ntfy-tty
+# > License: GNU AGPLv3
+# > Copyright 2026 Jakub Petrovič
+
+# Global variables
+CONFIG_LOCATION=$HOME/.ntfy-tty/config.conf
+LOG_DIR_LOCATION=$HOME/.ntfy-tty/logs/
+
+MESSAGE=""
+NTFY_TOKEN=""
+NTFY_USERNAME=""
+NTFY_PASSWORD=""
+NTFY_TOPIC=""
+NTFY_SERVER="https://ntfy.sh/"
+
+load_config() {
+    if [[ -f "$CONFIG_LOCATION" ]]; then
+        declare -A config
+        while IFS='=' read -r key value || [ -n "$key" ]; do
+            [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+            config["$key"]="$(echo "$value" | tr -d '\r')"
+        done < "$CONFIG_LOCATION"
+        
+        [[ -v config[TOKEN] ]] && NTFY_TOKEN="${config[TOKEN]}"
+        [[ -v config[PASSWORD] ]] && NTFY_PASSWORD="${config[PASSWORD]}"
+        [[ -v config[USERNAME] ]] && NTFY_USERNAME="${config[USERNAME]}"
+        [[ -v config[SERVER] ]] && NTFY_SERVER="${config[SERVER]}"
+        [[ -v config[TOPIC] ]] && NTFY_TOPIC="${config[TOPIC]}"
+    fi
+}
+
+send_ntfy() {
+    # echo "$NTFY_TOKEN $NTFY_SERVER $NTFY_TOPIC $NTFY_USERNAME $NTFY_PASSWORD $MESSAGE"
+    if [[ -n "$NTFY_TOKEN" ]]; then
+        curl -H "Authorization: Bearer $NTFY_TOKEN" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
+    elif [[ -n "$NTFY_USERNAME" && -n "$NTFY_PASSWORD" ]]; then
+        curl -u "$NTFY_USERNAME:$NTFY_PASSWORD" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
+    else
+        curl -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
+    fi
+}
+
+load_config
+
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        -m|--message) 
+            MESSAGE="$2"
+            shift 
+            ;;
+        -h|--help)
+            show_help
+            break
+            ;;
+        -t|--topic)
+            NTFY_TOPIC="$2"
+            shift
+            ;;
+        -c|--config)
+            CONFIG_LOCATION="$2"
+            load_config
+            shift
+            ;;
+        -s|--server)
+            NTFY_SERVER="$2"
+            shift
+            ;; 
+        -u|--username)
+            NTFY_USERNAME="$2"
+            shift
+            ;;
+        -p|--password)
+            NTFY_PASSWORD="$2"
+            shift
+            ;;
+        --token)
+            NTFY_TOKEN="$2"
+            shift
+            ;;
+        *) 
+            echo "Unknown parameter passed: $1"
+            show_help
+            exit 1 
+            ;;
+    esac
+    shift
+done
+
+send_ntfy
