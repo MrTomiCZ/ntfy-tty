@@ -6,7 +6,7 @@
 # > Copyright 2026 Jakub Petrovič
 
 # Dependency checks
-NTFY_DEPS=('curl' 'date' 'mkdir' 'echo' 'trap' 'bash')
+NTFY_DEPS=('curl' 'date' 'mkdir' 'readlink' 'cmp' 'diff' 'less' 'cp' 'chmod' 'mv' 'rm' 'tr')
 
 toolErr() {
     echo "$1 doesn't exist" >&2
