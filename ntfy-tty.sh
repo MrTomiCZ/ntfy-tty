@@ -5,9 +5,12 @@
 # > License: GNU AGPLv3
 # > Copyright 2026 Jakub Petrovič
 
+set -T
 # Global variables
 CONFIG_LOCATION=$HOME/.ntfy-tty/config.conf
 LOG_DIR_LOCATION=$HOME/.ntfy-tty/logs/
+LOG_FILE_NAME="ntfy-tty_$(date +'%Y-%m-%d_%H-%M-%S').log"
+FULL_LOG_PATH="$LOG_DIR_LOCATION/$LOG_FILE_NAME"
 
 MESSAGE=""
 NTFY_TOKEN=""
@@ -15,6 +18,11 @@ NTFY_USERNAME=""
 NTFY_PASSWORD=""
 NTFY_TOPIC=""
 NTFY_SERVER="https://ntfy.sh/"
+
+log() {
+    mkdir -p "$(dirname $FULL_LOG_PATH)"
+    echo "$1" >> "$FULL_LOG_PATH"
+}
 
 load_config() {
     if [[ -f "$CONFIG_LOCATION" ]]; then
@@ -24,6 +32,7 @@ load_config() {
             config["$key"]="$(echo "$value" | tr -d '\r')"
         done < "$CONFIG_LOCATION"
         
+        [[ -v config[LOG_PATH] ]] && FULL_LOG_PATH="${config[LOG_PATH]}"        
         [[ -v config[TOKEN] ]] && NTFY_TOKEN="${config[TOKEN]}"
         [[ -v config[PASSWORD] ]] && NTFY_PASSWORD="${config[PASSWORD]}"
         [[ -v config[USERNAME] ]] && NTFY_USERNAME="${config[USERNAME]}"
@@ -80,6 +89,10 @@ while [[ "$#" -gt 0 ]]; do
             NTFY_TOKEN="$2"
             shift
             ;;
+        -l|--log)
+            FULL_LOG_PATH="$2"
+            shift
+            ;;
         *) 
             echo "Unknown parameter passed: $1"
             show_help
@@ -88,5 +101,8 @@ while [[ "$#" -gt 0 ]]; do
     esac
     shift
 done
+
+trap 'log "RUNNING: $BASH_COMMAND"' DEBUG
+trap 'log "ERROR: Command failed on line $LINENO with exit code $?"' ERR
 
 send_ntfy
