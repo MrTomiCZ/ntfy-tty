@@ -35,7 +35,7 @@ done
 set -T
 # Global variables
 CONFIG_LOCATION=$HOME/.ntfy-tty/config.conf
-LOG_DIR_LOCATION=$HOME/.ntfy-tty/logs/
+LOG_DIR_LOCATION=$HOME/.ntfy-tty/logs # removed trailing slash cuz the path would be /home/<user>/.ntfy-tty/logs//...
 LOG_FILE_NAME="ntfy-tty_$(date +'%Y-%m-%d_%H-%M-%S').log"
 FULL_LOG_PATH="$LOG_DIR_LOCATION/$LOG_FILE_NAME"
 NTFY_SOURCE="https://github.com/jakub-petrovic/ntfy-tty/raw/refs/heads/main/ntfy-tty.sh"
@@ -89,6 +89,10 @@ send_ntfy() {
 
 updater() {
     # Updater function
+
+    # don't update
+    if [[ "$NTFY_UPDATE" == "never" ]]; then return 0; fi
+
     TEMPFILE="${TMPDIR:-/tmp}/ntfytty.sh"
     CURRFILE="$(readlink -f "$0")"
     curl -fsSL "$NTFY_SOURCE" -o "$TEMPFILE"
@@ -98,8 +102,9 @@ updater() {
     if cmp -s "$TEMPFILE" "$CURRFILE"; then
         rm "$TEMPFILE"
     else
-        if [[ "$NTFY_UPDATE" == "never" ]]; then return 0
-        elif [[ "$NTFY_UPDATE" == "always" ]]; then update "$@"; return 0
+        # update
+        if [[ "$NTFY_UPDATE" == "always" ]]; then update "$@"; return 0
+        # ask user
         elif [[ "$NTFY_UPDATE" == "auto" || "$NTFY_UPDATE" == "ask" ]]; then
             diff --color=always "$TEMPFILE" "$CURRFILE" | less -R
 
@@ -121,8 +126,12 @@ updater() {
                         ;;
                 esac
             done
+        # something other
         else
             echo "cannot figure out what update mode to use" >&2
+            echo "valid are: ask, auto, always, never" >&2
+            echo "ask is an alias for auto" >&2
+            # not fatal; continue
         fi
     fi
 }
@@ -155,7 +164,7 @@ show_help() {
     printf "$PRINTF_PADDING_PATTERN" "-u --username" "Username - Username with which to authenticate to the ntfy server (use in combination with -p)"
     printf "$PRINTF_PADDING_PATTERN" "-p --password" "Password - Password with which to authenticate to the ntfy server (use in combination with -u)"
     printf "$PRINTF_PADDING_PATTERN" "-a --token" "Token - Token with which to authenticate to the ntfy server (has priority over -u & -p)"
-    printf "$PRINTF_PADDING_PATTERN" "-l --log" "Log file - by default this is stored in $FULL_LOG_PATH (assuming -l wasn't specified)"
+    printf "$PRINTF_PADDING_PATTERN" "-l --log" "Log file - by default this is stored in $LOG_DIR_LOCATION and smth with the date idrk (assuming -l wasn't specified)"
     printf "$PRINTF_PADDING_PATTERN" "-d --update" "Update - forces an update (does not ask the user for permission to update)"
     printf "$PRINTF_PADDING_PATTERN" "-n --no-update" "No Update - forces to not update (does not ask the user to update; doesn't update lol)"
 }
