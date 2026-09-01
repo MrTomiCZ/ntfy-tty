@@ -74,6 +74,8 @@ load_config() {
 
 send_ntfy() {
     # echo "$NTFY_TOKEN $NTFY_SERVER $NTFY_TOPIC $NTFY_USERNAME $NTFY_PASSWORD $MESSAGE"
+    # check if the ntfy server ends with a slash, if yes continue, if no append it
+    [[ ! "$NTFY_SERVER" == */ ]] && NTFY_SERVER="$NTFY_SERVER/"
     # Auth methods
     if [[ -n "$NTFY_TOKEN" ]]; then
         # Token
