@@ -100,7 +100,7 @@ updater() {
     else
         if [[ "$NTFY_UPDATE" == "never" ]]; then return 0
         elif [[ "$NTFY_UPDATE" == "always" ]]; then update "$@"; return 0
-        elif [[ "$NTFY_UPDATE" == "auto" ]]; then
+        elif [[ "$NTFY_UPDATE" == "auto" || "$NTFY_UPDATE" == "ask" ]]; then
             diff --color=always "$TEMPFILE" "$CURRFILE" | less -R
 
             while true; do
@@ -148,7 +148,7 @@ show_help() {
     echo ""
     echo "Syntax:"
     printf "$PRINTF_PADDING_PATTERN" "-m --message" "Message - Message to send to the ntfy server"
-    printf "$PRINTF_PADDING_PATTERN" "-h --help -?" "Help - this help message"
+    printf "$PRINTF_PADDING_PATTERN" "-h --help -?" "Help - this help message & exit"
     printf "$PRINTF_PADDING_PATTERN" "-t --topic" "Topic - Topic to which send the message on the ntfy server"
     printf "$PRINTF_PADDING_PATTERN" "-c --config" "Config - Config file from which to load config"
     printf "$PRINTF_PADDING_PATTERN" "-s --server" "Server - Server to which send the ntfy request"
@@ -172,7 +172,8 @@ while [[ "$#" -gt 0 ]]; do
             ;;
         -h|--help|"-?")
             show_help
-            break
+            #break
+            exit 0 # i think you meant to exit
             ;;
         -t|--topic)
             NTFY_TOPIC="$2"
