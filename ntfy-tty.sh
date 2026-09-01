@@ -86,15 +86,14 @@ send_ntfy() {
 }
 
 updater() {
-    # Updater
-    TEMPFILE="${TMPDIR:-/tmp}/spymypc.sh"
+    # Updater function
+    TEMPFILE="${TMPDIR:-/tmp}/ntfytty.sh"
     CURRFILE="$(readlink -f "$0")"
     curl -fsSL "$NTFY_SOURCE" -o "$TEMPFILE"
     if [[ ! -s "$TEMPFILE" ]]; then
-        echo "Failed to download update"
+        echo "Failed to download update" >&2
     fi
     if cmp -s "$TEMPFILE" "$CURRFILE"; then
-        echo "Up to date"
         rm "$TEMPFILE"
     else
         diff --color=always "$TEMPFILE" "$CURRFILE" | less -R
@@ -103,17 +102,17 @@ updater() {
             read -p "Update? [Yn] " answer
 
             case "$answer" in
-                ""[Yy])
+                ""|[Yy])
                     echo "Updating"
                     cp "$TEMPFILE" "$CURRFILE.tmp" &&
                     chmod +x "$CURRFILE.tmp" &&
                     mv "$CURRFILE.tmp" "$CURRFILE" &&
                     rm "$TEMPFILE" &&
-                    exec "$CURRFILE" $*
+                    exec "$CURRFILE" "$@"
                     break
                     ;;
                 [Nn])
-                    echo "alr not updating"
+                    echo "Not updating"
                     rm "$TEMPFILE"
                     break
                     ;;
@@ -124,6 +123,9 @@ updater() {
         done
     fi
 }
+
+# Updater
+updater "$@"
 
 # Load the config
 load_config
