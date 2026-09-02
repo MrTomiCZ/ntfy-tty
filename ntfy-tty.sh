@@ -221,6 +221,7 @@ while [[ "$#" -gt 0 ]]; do
         -n|--no-update)
             NTFY_UPDATE="never"
             ;;
+        # todo: add -r | --receive which sets NTFY_MODE to receive instead of send (with put as an alias to set)
         *) 
             echo "Unknown parameter passed: $1"
             show_help
