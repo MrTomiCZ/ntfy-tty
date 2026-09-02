@@ -3,3 +3,4 @@ TOPIC=topic
 USERNAME=username
 PASSWORD=password
 TOKEN=tk_token
+UPDATE=auto
