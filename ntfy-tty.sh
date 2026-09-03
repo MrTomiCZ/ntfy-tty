@@ -71,16 +71,28 @@ load_config() {
         [[ -v config[TOPIC] ]] && NTFY_TOPIC="${config[TOPIC]}"
         [[ -v config[UPDATE] ]] && NTFY_UPDATE="${config[UPDATE]}"
         [[ -v config[MODE] ]] && NTFY_MODE="${config[MODE]}"
+        [[ -v config[RCVMODE] ]] && NTFY_RCV_MODE="${config[RCVMODE]}"
     fi
 }
 
 send_ntfy() {
+    # check if the ntfy server ends with a slash, if yes continue, if no append it
+    [[ ! "$NTFY_SERVER" == */ ]] && NTFY_SERVER="$NTFY_SERVER/"
+
     if [[ "$NTFY_MODE" == "receive" || "$NTFY_MODE" == "get" ]]; then
-        echo "will be implemented"
+        #echo "will be implemented"
+        
+        if [[ "$NTFY_RCV_MODE" == "raw" || "$NTFY_RCV_MODE" == "" ]]; then
+            curl -H "Authorization: Bearer $NTFY_TOKEN" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}/raw" # only supports token auth
+        elif [[ "$NTFY_RCV_MODE" == "json" ]]; then
+            curl -H "Authorization: Bearer $NTFY_TOKEN" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}/json" # only supports token auth
+        elif [[ "$NTFY_RCV_MODE" == "sse" ]]; then
+            curl -H "Authorization: Bearer $NTFY_TOKEN" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}/sse" # only supports token auth
+        else
+            echo "unknown receive mode" >&2
+        fi
     elif [[ "$NTFY_MODE" == "send" || "$NTFY_MODE" == "put" ]]; then
         # echo "$NTFY_TOKEN $NTFY_SERVER $NTFY_TOPIC $NTFY_USERNAME $NTFY_PASSWORD $MESSAGE"
-        # check if the ntfy server ends with a slash, if yes continue, if no append it
-        [[ ! "$NTFY_SERVER" == */ ]] && NTFY_SERVER="$NTFY_SERVER/"
         # Auth methods
         if [[ -n "$NTFY_TOKEN" ]]; then
             # Token
@@ -179,6 +191,8 @@ show_help() {
     printf "$PRINTF_PADDING_PATTERN" "-d --update" "Update - forces an update (does not ask the user for permission to update)"
     printf "$PRINTF_PADDING_PATTERN" "-n --no-update" "No Update - forces to not update (does not ask the user to update; doesn't update lol)"
     printf "$PRINTF_PADDING_PATTERN" "-r --receive" "Receive - Receives from the server URL specified (topic & server, -m sends a message to the URL before connecting)"
+    printf "$PRINTF_PADDING_PATTERN" "-S --send" "Send - Sends a message to the server URL specified, this is the default option unless specified otherwise by the config"
+    printf "$PRINTF_PADDING_PATTERN" "-R --receive-mode -rm" "Receive mode - can be 'json', 'raw' and 'sse'. By default this is 'raw'"
 }
 
 # Load the config
@@ -208,7 +222,7 @@ while [[ "$#" -gt 0 ]]; do
         -s|--server)
             NTFY_SERVER="$2"
             shift
-            ;; 
+            ;;
         -u|--username)
             NTFY_USERNAME="$2"
             shift
@@ -237,7 +251,10 @@ while [[ "$#" -gt 0 ]]; do
         -S|--send)
             NTFY_MODE="send"
             ;;
-        # todo: add -r | --receive which sets NTFY_MODE to receive instead of send (with put as an alias to set)
+        -R|--receive-mode|-rm)
+            NTFY_RCV_MODE="$2"
+            shift
+            ;;
         *)
             echo "Unknown parameter passed: $1"
             show_help
