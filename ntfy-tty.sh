@@ -81,6 +81,16 @@ send_ntfy() {
 
     if [[ "$NTFY_MODE" == "receive" || "$NTFY_MODE" == "get" ]]; then
         #echo "will be implemented"
+        if [[ -n "$NTFY_TOKEN" ]]; then
+            # Token
+            NTFY_COMMAND=('token' 'curl -H '"Authorization: Bearer $NTFY_TOKEN" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"''
+        elif [[ -n "$NTFY_USERNAME" && -n "$NTFY_PASSWORD" ]]; then
+            # User & pass
+            curl -u "$NTFY_USERNAME:$NTFY_PASSWORD" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
+        else
+            # No auth
+            curl -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
+        fi
         
         if [[ "$NTFY_RCV_MODE" == "raw" || "$NTFY_RCV_MODE" == "" ]]; then
             curl -H "Authorization: Bearer $NTFY_TOKEN" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}/raw" # only supports token auth
