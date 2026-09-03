@@ -47,10 +47,11 @@ NTFY_USERNAME=""
 NTFY_PASSWORD=""
 NTFY_TOPIC=""
 NTFY_SERVER="https://ntfy.sh/"
+NTFY_MODE="send"
 
 # Functions
 log() {
-    mkdir -p "$(dirname $FULL_LOG_PATH)"
+    mkdir -p "$(dirname "$FULL_LOG_PATH")"
     echo "$1" >> "$FULL_LOG_PATH"
 }
 
@@ -61,31 +62,39 @@ load_config() {
             [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
             config["$key"]="$(echo "$value" | tr -d '\r')"
         done < "$CONFIG_LOCATION"
-        
-        [[ -v config[LOG_PATH] ]] && FULL_LOG_PATH="${config[LOG_PATH]}"        
+
+        [[ -v config[LOG_PATH] ]] && FULL_LOG_PATH="${config[LOG_PATH]}"
         [[ -v config[TOKEN] ]] && NTFY_TOKEN="${config[TOKEN]}"
         [[ -v config[PASSWORD] ]] && NTFY_PASSWORD="${config[PASSWORD]}"
         [[ -v config[USERNAME] ]] && NTFY_USERNAME="${config[USERNAME]}"
         [[ -v config[SERVER] ]] && NTFY_SERVER="${config[SERVER]}"
         [[ -v config[TOPIC] ]] && NTFY_TOPIC="${config[TOPIC]}"
         [[ -v config[UPDATE] ]] && NTFY_UPDATE="${config[UPDATE]}"
+        [[ -v config[MODE] ]] && NTFY_MODE="${config[MODE]}"
     fi
 }
 
 send_ntfy() {
-    # echo "$NTFY_TOKEN $NTFY_SERVER $NTFY_TOPIC $NTFY_USERNAME $NTFY_PASSWORD $MESSAGE"
-    # check if the ntfy server ends with a slash, if yes continue, if no append it
-    [[ ! "$NTFY_SERVER" == */ ]] && NTFY_SERVER="$NTFY_SERVER/"
-    # Auth methods
-    if [[ -n "$NTFY_TOKEN" ]]; then
-        # Token
-        curl -H "Authorization: Bearer $NTFY_TOKEN" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
-    elif [[ -n "$NTFY_USERNAME" && -n "$NTFY_PASSWORD" ]]; then
-        # User & pass
-        curl -u "$NTFY_USERNAME:$NTFY_PASSWORD" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
+    if [[ "$NTFY_MODE" == "receive" || "$NTFY_MODE" == "get" ]]; then
+        echo "will be implemented"
+    elif [[ "$NTFY_MODE" == "send" || "$NTFY_MODE" == "put" ]]; then
+        # echo "$NTFY_TOKEN $NTFY_SERVER $NTFY_TOPIC $NTFY_USERNAME $NTFY_PASSWORD $MESSAGE"
+        # check if the ntfy server ends with a slash, if yes continue, if no append it
+        [[ ! "$NTFY_SERVER" == */ ]] && NTFY_SERVER="$NTFY_SERVER/"
+        # Auth methods
+        if [[ -n "$NTFY_TOKEN" ]]; then
+            # Token
+            curl -H "Authorization: Bearer $NTFY_TOKEN" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
+        elif [[ -n "$NTFY_USERNAME" && -n "$NTFY_PASSWORD" ]]; then
+            # User & pass
+            curl -u "$NTFY_USERNAME:$NTFY_PASSWORD" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
+        else
+            # No auth
+            curl -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
+        fi
     else
-        # No auth
-        curl -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
+        echo "Unknown mode provided" >&2
+        exit 1 # exit with a non-success exit code cause we couldnt send and would rather exit than break stuff
     fi
 }
 
@@ -169,6 +178,7 @@ show_help() {
     printf "$PRINTF_PADDING_PATTERN" "-l --log" "Log file - by default this is stored in $LOG_DIR_LOCATION and smth with the date idrk (assuming -l wasn't specified)"
     printf "$PRINTF_PADDING_PATTERN" "-d --update" "Update - forces an update (does not ask the user for permission to update)"
     printf "$PRINTF_PADDING_PATTERN" "-n --no-update" "No Update - forces to not update (does not ask the user to update; doesn't update lol)"
+    printf "$PRINTF_PADDING_PATTERN" "-r --receive" "Receive - Receives from the server URL specified (topic & server, -m sends a message to the URL before connecting)"
 }
 
 # Load the config
@@ -177,9 +187,9 @@ load_config
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
-        -m|--message) 
+        -m|--message)
             MESSAGE="$2"
-            shift 
+            shift
             ;;
         -h|--help|"-?")
             show_help
@@ -221,11 +231,17 @@ while [[ "$#" -gt 0 ]]; do
         -n|--no-update)
             NTFY_UPDATE="never"
             ;;
+        -r|--receive)
+            NTFY_MODE="receive"
+            ;;
+        -S|--send)
+            NTFY_MODE="send"
+            ;;
         # todo: add -r | --receive which sets NTFY_MODE to receive instead of send (with put as an alias to set)
-        *) 
+        *)
             echo "Unknown parameter passed: $1"
             show_help
-            exit 1 
+            exit 1
             ;;
     esac
     shift
