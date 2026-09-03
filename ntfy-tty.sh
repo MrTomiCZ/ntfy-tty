@@ -83,7 +83,7 @@ send_ntfy() {
         #echo "will be implemented"
         if [[ -n "$NTFY_TOKEN" ]]; then
             # Token
-            NTFY_COMMAND=('token' 'curl -H '"Authorization: Bearer $NTFY_TOKEN" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"''
+            NTFY_COMMAND=('token' 'curl -H '"Authorization: Bearer $NTFY_TOKEN" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"'')
         elif [[ -n "$NTFY_USERNAME" && -n "$NTFY_PASSWORD" ]]; then
             # User & pass
             curl -u "$NTFY_USERNAME:$NTFY_PASSWORD" -d "$MESSAGE" "${NTFY_SERVER}${NTFY_TOPIC}"
